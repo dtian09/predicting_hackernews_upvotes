@@ -1,9 +1,19 @@
 import pandas as pd
 from sqlalchemy import create_engine
+import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
+
+# Get the database URL from environment variable
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
 
 # Create the SQLAlchemy engine
-engine = create_engine(f'postgresql://connection string here')
+engine = create_engine(DATABASE_URL)
 
 # Define the query
 query = """
