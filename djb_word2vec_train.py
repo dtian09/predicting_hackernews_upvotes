@@ -3,6 +3,8 @@ from itertools import chain
 import torch
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+from tqdm import tqdm
+
 
 class CBOWDataset(Dataset):
     def __init__(self, data, word_to_idx):
@@ -20,13 +22,17 @@ class CBOWDataset(Dataset):
 
 
 corpus = torch.load('djb_cbow_dataset_corpus.pt')
+print("corpus loaded")
 word_to_idx = torch.load('djb_cbow_dataset_word_to_idx.pt')
+print("word_to_idx loaded")
 idx_to_word = torch.load('djb_cbow_dataset_idx_to_word.pt')
+print("idx_to_word loaded")
 training_data = torch.load('djb_cbow_dataset_training_data.pt')
+print("training_data loaded")
 
 dataset = CBOWDataset(training_data, word_to_idx)
 dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
-
+print("dataloader loaded")
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -48,15 +54,20 @@ import torch.optim as optim
 embedding_dim = 100
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+print(f"device loaded: {device}")
+
 model = CBOWModel(vocab_size=len(word_to_idx), embedding_dim=embedding_dim).to(device)
 loss_fn = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 # Training loop
 epochs = 5
-for epoch in range(epochs):
+outer_bar = tqdm(range(epochs), desc="Training")
+for epoch in outer_bar:
     total_loss = 0
-    for context_idxs, target in dataloader:
+    inner_bar = tqdm(dataloader, desc=f"Epoch {epoch+1}", leave=False)
+    
+    for context_idxs, target in inner_bar:
         context_idxs = context_idxs.to(device)
         target = target.to(device)
 
@@ -67,4 +78,10 @@ for epoch in range(epochs):
         optimizer.step()
 
         total_loss += loss.item()
-    print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
+        inner_bar.set_postfix(batch_loss=loss.item())
+    
+    outer_bar.set_postfix(epoch_loss=total_loss)
+
+
+torch.save(model.state_dict(), "djb_cbow_model.pth")
+print("model saved")
