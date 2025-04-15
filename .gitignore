@@ -29,4 +29,6 @@ postgres_connection.txt
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db
+
+djb_cbow_dataset.pt
