@@ -68,3 +68,6 @@ for epoch in range(epochs):
 
         total_loss += loss.item()
     print(f"Epoch {epoch+1}, Loss: {total_loss:.4f}")
+
+torch.save(model.state_dict(), "./models/cbow_model.pt")
+print("Model saved to ./models/cbow_model.pt")
