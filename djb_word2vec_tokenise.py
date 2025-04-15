@@ -52,9 +52,13 @@ training_data = generate_cbow_data(corpus)
 
 import torch
 
-torch.save({
-    'corpus': corpus,
-    'word_to_idx': word_to_idx,
-    'idx_to_word': idx_to_word,
-    'training_data': training_data
-}, 'djb_cbow_dataset.pt')
+torch.save(corpus, 'djb_cbow_dataset_corpus.pt')
+print("Corpus saved")
+torch.save(word_to_idx, 'djb_cbow_dataset_word_to_idx.pt')
+print("Word to idx saved")
+torch.save(idx_to_word, 'djb_cbow_dataset_idx_to_word.pt')
+print("Idx to word saved")
+torch.save(training_data, 'djb_cbow_dataset_training_data.pt')
+print("Training data saved")
+
+
