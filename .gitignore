@@ -2,19 +2,27 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
 .Python
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual Environment
+.env
+.venv
+env/
 venv/
-.venv/
 ENV/
 
 # Jupyter Notebook
-.ipynb_checkpoints/
-*/.ipynb_checkpoints/*
+.ipynb_checkpoints
 
-# Environment variables
-.env
-postgres_connection.txt
+# PyTorch model files and data
+*.pt
+data/*.pt
 
 # IDE
 .idea/
