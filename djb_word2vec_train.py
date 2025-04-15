@@ -19,11 +19,10 @@ class CBOWDataset(Dataset):
         return context_idxs, target_idx
 
 
-data = torch.load('djb_cbow_dataset.pt')
-corpus = data['corpus']
-word_to_idx = data['word_to_idx']
-idx_to_word = data['idx_to_word']
-training_data = data['training_data']
+corpus = torch.load('djb_cbow_dataset_corpus.pt')
+word_to_idx = torch.load('djb_cbow_dataset_word_to_idx.pt')
+idx_to_word = torch.load('djb_cbow_dataset_idx_to_word.pt')
+training_data = torch.load('djb_cbow_dataset_training_data.pt')
 
 dataset = CBOWDataset(training_data, word_to_idx)
 dataloader = DataLoader(dataset, batch_size=128, shuffle=True)
