@@ -40,3 +40,4 @@ djb_cbow_model.pth
 djb_cbow_model_state_dict.pthwandb/
 wandb/*
 *.pt
+*.pkl
