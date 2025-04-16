@@ -8,10 +8,10 @@ with open(filename, "r") as f:
     text = f.read()
 
 # Split into words
-words = text.split()[:1_000_000]
+words = text.split()
 
 # Build vocabulary of most common words
-vocab_size = 10000
+vocab_size = 70000
 word_counts = Counter(words).most_common(vocab_size - 1)
 word_to_idx = {word: idx + 1 for idx, (word, _) in enumerate(word_counts)}
 word_to_idx["<UNK>"] = 0
