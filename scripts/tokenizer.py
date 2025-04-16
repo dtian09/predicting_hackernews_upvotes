@@ -8,10 +8,13 @@
 #     - setting the vocab length to the total number of unique words
 # 
 
-# %%
 from collections import Counter
 import re
 
+file_path = "../data/wiki_text_data.txt"
+
+with open(file_path, "r") as file:
+    text = file.read()
 
 def tokenizer(text):
     # split the string into a list of words by whitespace and remove punctuation
@@ -31,6 +34,7 @@ def tokenizer(text):
     # filter to only include words that appear at least N times
     N = 5  # minimum frequency threshold
     unique_word_counts = {word: count for word, count in all_word_counts.items() if count >= N}
+    corpus = list(unique_word_counts.keys())
 
     print('Number of unique words included in word count before filtering: ', len(all_word_counts))
     print('Number of unique words included in word count after filtering: ', len(unique_word_counts))
@@ -39,17 +43,13 @@ def tokenizer(text):
     # set vocabulary length to the total number of unique words
     vocab_length = len(unique_word_counts)
 
-    # create a corpus of words that are in the vocabulary
-    corpus = [word for word in lower_case_words if word in unique_word_counts]
-
     # create a word to id mapping with the length of ids being the vocab length
     word_to_id = {word: i for i, word in enumerate(unique_word_counts.keys())}
 
     # create a id to word mapping with the length of ids being the vocab length
     id_to_word = {i: word for i, word in enumerate(unique_word_counts.keys())}
 
-    return word_to_id, id_to_word, corpus
-
+    return word_to_id, id_to_word, corpus, unique_word_counts
 
 
 
