@@ -12,23 +12,25 @@ if len(sys.argv) > 1:
     compare_word = sys.argv[1]
     
 #filename = "word_embeddings_dim200_epoch10.pt"
-embeddings_filename = "../data/skip_gram_embeddings.pt"
+embeddings_filename = "skip_gram_embeddings.pt"
 embeddings = torch.load(embeddings_filename,weights_only=False)
 
-word_idx_filename = "../data/skip_gram_word_to_idx.pt"
+word_idx_filename = "skip_gram_word_to_idx.pt"
 word_idx = torch.load(word_idx_filename,weights_only=False)
 
-idx_word_filename = "../data/skip_gram_idx_to_word.pt"
+idx_word_filename = "skip_gram_idx_to_word.pt"
 idx_word = torch.load(idx_word_filename,weights_only=False)
 
 print(f"compare_word: '{compare_word}' on '{word_idx_filename}'")
 
 compare_idx = word_idx[compare_word]
-
 compare_embedding = torch.tensor(embeddings[compare_idx])
 
+print(f"compare_idx: {compare_idx}")
+print(f"compare_embedding: {compare_embedding}")
+
 # calculate the cosine similarity between the compare_embedding and all other embeddings
-results = [(idx, cosine_similarity(compare_embedding.unsqueeze(0), torch.tensor(value).unsqueeze(0)).item()) 
+results = [(idx, cosine_similarity(compare_embedding, torch.tensor(value)).item()) 
            for idx, value in embeddings.items()]
 
 # Sort the results by similarity in descending order
