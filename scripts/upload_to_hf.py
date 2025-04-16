@@ -1,56 +1,31 @@
 from huggingface_hub import HfApi
 import os
 from dotenv import load_dotenv
+import glob
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
-def upload_to_huggingface(file_path, repo_id, token):
-    """
-    Upload a .pt file to Hugging Face Hub
+def main():
+    # Get the token from environment variables
+    token = os.getenv("HUGGINGFACE_TOKEN")
     
-    Args:
-        file_path (str): Path to the .pt file
-        repo_id (str): Hugging Face repository ID (format: 'username/repo-name')
-        token (str): Hugging Face API token
-    """
-    api = HfApi()
-    
-    # Create repository if it doesn't exist
-    try:
-        api.create_repo(repo_id, token=token, exist_ok=True)
-    except Exception as e:
-        print(f"Error creating repository: {e}")
-        return
-    
-    # Upload the file
-    try:
+    # Initialize the Hugging Face API
+    api = HfApi(token=token)
+
+    pt_files = glob.glob("./data/*.pt")
+
+    for file in pt_files:
+        print(file)
         api.upload_file(
-            path_or_fileobj=file_path,
-            path_in_repo=os.path.basename(file_path),
-            repo_id=repo_id,
+            path_or_fileobj=file,
+            path_in_repo=os.path.basename(file),
+            repo_id="titaneve/hackernews_prediction_mlx",
+            repo_type="dataset",
             token=token
         )
-        print(f"Successfully uploaded {file_path} to {repo_id}")
-    except Exception as e:
-        print(f"Error uploading file: {e}")
+        print(f"Successfully uploaded {file}")
+
 
 if __name__ == "__main__":
-    # Get Hugging Face token from environment variable
-    token = os.getenv("HUGGINGFACE_TOKEN")
-    if not token:
-        print("Please set your HUGGINGFACE_TOKEN in the .env file")
-        exit(1)
-    
-    # Example usage
-    repo_id = "your-username/your-repo-name"  # Replace with your repository name
-    pt_files = [
-        "../data/training_data.pt",
-        # Add other .pt files here
-    ]
-    
-    for file_path in pt_files:
-        if os.path.exists(file_path):
-            upload_to_huggingface(file_path, repo_id, token)
-        else:
-            print(f"File not found: {file_path}") 
+    main() 
