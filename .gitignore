@@ -4,17 +4,28 @@ __pycache__/
 *$py.class
 *.so
 .Python
-ENV/
-.venv
-venv
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Jupyter Notebook
-.ipynb_checkpoints/
-*/.ipynb_checkpoints/*
-
-# Environment variables
+# Virtual Environment
 .env
-postgres_connection.txt
+.venv
+env/
+venv/
+ENV/
 
 # IDE
 .idea/
@@ -22,14 +33,46 @@ postgres_connection.txt
 *.swp
 *.swo
 
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data files
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.csv
+*.json
+*.jsonl
+*.txt
+*.tsv
+*.gz
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Logs
+*.log
+logs/
+tensorboard/
+wandb/
+
 # OS
 .DS_Store
+Thumbs.db
+
+# Environment variables
+postgres_connection.txt
+
+# OS
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
-Thumbs.db
-
-# Data files
-*.pt 
+ehthumbs.db 

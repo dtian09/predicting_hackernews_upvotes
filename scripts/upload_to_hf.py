@@ -13,7 +13,8 @@ def main():
     # Initialize the Hugging Face API
     api = HfApi(token=token)
 
-    pt_files = glob.glob("./data/*.pt")
+    #pt_files = glob.glob("./data/*.pt")
+    pt_files = ("./tensors/cbow_model_dim100_batch32_final.pt", "./tensors/word_embeddings_dim100.pt")
 
     for file in pt_files:
         print(file)
