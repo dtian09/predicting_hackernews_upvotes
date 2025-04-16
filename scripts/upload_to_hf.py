@@ -14,7 +14,7 @@ def main():
     api = HfApi(token=token)
 
     #pt_files = glob.glob("./data/*.pt")
-    pt_files = ("./tensors/cbow_model_dim100_batch32_final.pt", "./tensors/word_embeddings_dim100.pt")
+    pt_files = ("./model/cbow_model_dim300_epoch30_best.pt", "./model/word_embeddings_dim300_epoch30.pt")
 
     for file in pt_files:
         print(file)

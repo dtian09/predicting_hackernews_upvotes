@@ -7,3 +7,6 @@ torch>=2.2.0
 tqdm==4.65.0
 huggingface_hub>=0.20.0
 wandb>=0.16.0
+umap-learn>=0.5.5
+matplotlib>=3.8.0
+plotly>=5.18.0
