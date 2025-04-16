@@ -1,5 +1,8 @@
 pandas>=2.0.0
 SQLAlchemy>=2.0.0
 python-dotenv>=1.0.0
-psycopg2>=2.9.0
-pyarrow>=14.0.1 
+psycopg2-binary>=2.9.0
+pyarrow>=14.0.1
+torch>=2.2.0
+tqdm==4.65.0
+huggingface_hub>=0.20.0
