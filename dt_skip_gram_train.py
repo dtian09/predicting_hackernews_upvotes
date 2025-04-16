@@ -1,7 +1,9 @@
 ''' 
 This script implements a Skip-gram model using PyTorch.
-The Skip-gram model is a type of neural network used in natural language processing to learn word embeddings.
-It is trained to predict the context words given a target word.
+input: djb_cbow_dataset_corpus.pt (output of djb_word2vec_tokenise.py)
+       djb_cbow_dataset_word_to_idx.pt
+       djb_cbow_dataset_idx_to_word.pt
+output: skip_gram_embeddings.pt file (dictionary with key= word id, value=embedding
 '''
 import torch
 import torch.nn as nn
@@ -117,8 +119,8 @@ for epoch in range(epochs):
 
     print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss:.4f}")
 
-torch.save(model.state_dict(), "./models/skip_gram_model.pt")
-print("Model saved to ./models/skip_gram_model.pt")
+#torch.save(model.state_dict(), "./models/skip_gram_model.pt")
+#print("Model saved to ./models/skip_gram_model.pt")
 
 # save embeddings to dictionary 
 embeddings = {}
