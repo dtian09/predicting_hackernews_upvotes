@@ -1,3 +1,8 @@
+''' 
+This script implements a Skip-gram model using PyTorch.
+The Skip-gram model is a type of neural network used in natural language processing to learn word embeddings.
+It is trained to predict the context words given a target word.
+'''
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,29 +12,45 @@ import random
 # Hyperparameters
 window_size = 2 
 embedding_dim = 100 #10
-epochs = 5 #100
+epochs = 100 #40 #100
 learning_rate = 0.01
 
-words = torch.load('djb_cbow_dataset_corpus.pt') #words
+words = torch.load('djb_cbow_dataset_corpus.pt')
 word2idx = torch.load('djb_cbow_dataset_word_to_idx.pt')
 idx2word = torch.load('djb_cbow_dataset_idx_to_word.pt')
-vocab = set(words)
-vocab_size = len(vocab)
+#select a subset of vocabulary
+#vocab_size=10000
+vocab_size='all vocab'
+random.seed(42)
+
+if vocab_size == 'all vocab':
+    selected_words = set(word2idx.keys())#unique words of vocab size
+    vocab_size = len(selected_words)
+else:#Randomly sample a subset of words
+    selected_words = set(random.sample(list(word2idx.keys()), vocab_size))#unique words of vocab size
+filtered_corpus = [word for word in words if word in selected_words]#corpus of vocab size that include sequence of words and repeats of words
+# New vocabulary based only on selected words
+filtered_vocab = sorted(set(filtered_corpus))
+word2idx = {word: idx for idx, word in enumerate(filtered_vocab)}
+idx2word = {idx: word for word, idx in word2idx.items()}
+print('vocab size:', len(selected_words))
 
 # Generate Skip-gram training pairs
-def generate_skipgram_data(words, window_size):
+def generate_skipgram_data(words, corpus, window_size):
     pairs = []
-    for i, target in enumerate(words):
+    for i in range(0,len(words)):
+        target = words[i]
         target_idx = word2idx[target]
-        for j in range(max(0, i - window_size), min(len(words), i + window_size + 1)):
+        for j in range(max(0, i - window_size), min(len(corpus), i + window_size + 1)):
             if i != j:
-                context_idx = word2idx[words[j]]
+                context_idx = word2idx[corpus[j]]
                 pairs.append((target_idx, context_idx))
     return pairs
 
 print('generating skip-gram training data')
-training_pairs = generate_skipgram_data(words, window_size)
+training_pairs = generate_skipgram_data(list(selected_words), filtered_corpus, window_size=window_size)
 print('training data of skip-gram is generated')
+print('number of training pairs:', len(training_pairs))
 
 # Define Skip-gram model
 class SkipGramModel(nn.Module):
@@ -53,30 +74,60 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = SkipGramModel(vocab_size, embedding_dim).to(device)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+#optimizer = torch.optim.Adam(model.parameters(), lr=0.003, weight_decay=1e-6)
+
+print('training the skip-gram model')
+
+def batchify(pairs, batch_size):
+    for i in range(0, len(pairs), batch_size):
+        yield pairs[i:i + batch_size]
+
+import torch.nn.functional as F
+
+batch_size = 128
+criterion = nn.CrossEntropyLoss()
 
 for epoch in range(epochs):
     total_loss = 0
-    for target_idx, context_idx in training_pairs:
-        target_tensor = torch.tensor([target_idx], dtype=torch.long).to(device)
-        context_tensor = torch.tensor([context_idx], dtype=torch.long).to(device)
+    random.shuffle(training_pairs)
 
-        scores = model.predict_context(target_tensor)  # [1, vocab_size]
-        loss = criterion(scores, context_tensor)
+    for batch in batchify(training_pairs, batch_size):
+        # Unpack batch into separate lists
+        target_indices = [pair[0] for pair in batch]
+        context_indices = [pair[1] for pair in batch]
 
+        # Convert to tensors and move to device
+        target_tensor = torch.tensor(target_indices, dtype=torch.long).to(device)   # [B]
+        context_tensor = torch.tensor(context_indices, dtype=torch.long).to(device) # [B]
+
+        # Forward pass: get target embeddings and predict context logits
+        target_emb = model.target_embedding(target_tensor)  # [B, D]
+        logits = torch.matmul(target_emb, model.context_embedding.weight.t())  # [B, V]
+
+        # CrossEntropyLoss expects raw logits and true class indices
+        loss = criterion(logits, context_tensor)
+
+        # Backprop
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
         total_loss += loss.item()
-    
-    if (epoch + 1) % 10 == 0:
-        print(f"Epoch {epoch + 1}/{epochs}, Loss: {total_loss:.4f}")
+
+    print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss:.4f}")
 
 torch.save(model.state_dict(), "./models/skip_gram_model.pt")
 print("Model saved to ./models/skip_gram_model.pt")
 
-# View embeddings
-#for word in word2idx:
-#    idx = torch.tensor([word2idx[word]])
-#    emb = model.target_embedding(idx).detach().numpy()
-#    print(f"{word}: {emb}")
+# save embeddings to dictionary 
+embeddings = {}
+device = torch.device("cpu")
+model.to(device)
+for word in word2idx:
+    idx = torch.tensor([word2idx[word]])
+    emb = model.target_embedding(idx).detach().numpy()
+    embeddings[int(idx)] = emb
+
+# Save the dictionary to a .pt file
+torch.save(embeddings, 'skip_gram_embeddings.pt')
