@@ -116,11 +116,10 @@ for epoch in range(epochs):
         optimizer.step()
 
         total_loss += loss.item()
+    print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss / num_batches:.4f}")
 
-    print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss:.4f}")
-
-#torch.save(model.state_dict(), "./models/skip_gram_model.pt")
-#print("Model saved to ./models/skip_gram_model.pt")
+torch.save(model.state_dict(), "./models/skip_gram_model.pt")
+print("Model saved to ./models/skip_gram_model.pt")
 
 # save embeddings to dictionary 
 embeddings = {}
