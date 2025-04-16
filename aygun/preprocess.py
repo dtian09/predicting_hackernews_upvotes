@@ -1,15 +1,17 @@
 from collections import Counter
 import pickle
 
+filename = "../data/wiki_text_data.txt"
+
 # Read raw text8 file
-with open("text8", "r") as f:
+with open(filename, "r") as f:
     text = f.read()
 
 # Split into words
-words = text.split()
+words = text.split()[:1_000_000]
 
 # Build vocabulary of most common words
-vocab_size = 30000
+vocab_size = 10000
 word_counts = Counter(words).most_common(vocab_size - 1)
 word_to_idx = {word: idx + 1 for idx, (word, _) in enumerate(word_counts)}
 word_to_idx["<UNK>"] = 0
