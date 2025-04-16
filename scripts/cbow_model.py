@@ -5,6 +5,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from tqdm import tqdm
 import time
 import os
+import numpy as np
 
 # Check GPU availability
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -17,10 +18,10 @@ if torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True
 
 # Training parameters
-EMBEDDING_DIM = 100
-BATCH_SIZE = 32
-LEARNING_RATE = 0.001
-NUM_EPOCHS = 5
+EMBEDDING_DIM = 200
+BATCH_SIZE = 128
+LEARNING_RATE = 0.005
+NUM_EPOCHS = 30
 TRAIN_SPLIT = 0.8  # 80% training, 20% testing
 
 print("\nLoading training data...")
@@ -92,14 +93,15 @@ class CBOWModel(nn.Module):
     def __init__(self, vocab_size, embedding_dim):
         super(CBOWModel, self).__init__()
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.dropout = nn.Dropout(p=0.3)
         self.linear = nn.Linear(embedding_dim, vocab_size)
         
     def forward(self, inputs):
         embeds = self.embeddings(inputs)
         out = torch.mean(embeds, dim=1)
+        out = self.dropout(out)
         out = self.linear(out)
-        log_probs = F.log_softmax(out, dim=1)
-        return log_probs
+        return out
     
     def get_embeddings(self):
         return self.embeddings.weight.data
@@ -111,8 +113,8 @@ model = model.to(device)
 print(f"Model created with vocab_size={vocab_size}, embedding_dim={EMBEDDING_DIM}")
 
 # Training setup
-criterion = nn.NLLLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-3)
 
 def evaluate(model, data_loader):
     model.eval()
@@ -121,8 +123,8 @@ def evaluate(model, data_loader):
         for context_words, target_word in data_loader:
             context_words = context_words.to(device)
             target_word = target_word.to(device)
-            log_probs = model(context_words)
-            loss = criterion(log_probs, target_word)
+            logits = model(context_words)
+            loss = criterion(logits, target_word)
             total_loss += loss.item()
     return total_loss / len(data_loader)
 
@@ -133,6 +135,9 @@ print(f"Learning rate: {LEARNING_RATE}")
 
 # Training loop
 best_test_loss = float('inf')
+train_losses = []  # List to track training losses
+test_losses = []   # List to track test losses
+
 for epoch in range(NUM_EPOCHS):
     model.train()
     total_loss = 0
@@ -146,8 +151,8 @@ for epoch in range(NUM_EPOCHS):
         
         # Forward pass
         optimizer.zero_grad()
-        log_probs = model(context_words)
-        loss = criterion(log_probs, target_word)
+        logits = model(context_words)
+        loss = criterion(logits, target_word)
         
         # Backward pass
         loss.backward()
@@ -163,18 +168,34 @@ for epoch in range(NUM_EPOCHS):
     test_loss = evaluate(model, test_loader)
     epoch_time = time.time() - start_time
     
+    # Track losses
+    train_losses.append(train_loss)
+    test_losses.append(test_loss)
+    
     print(f'\nEpoch {epoch+1}/{NUM_EPOCHS}:')
     print(f'Train Loss: {train_loss:.4f}')
     print(f'Test Loss: {test_loss:.4f}')
     print(f'Time: {epoch_time:.2f} seconds')
     
-    # Save best model
+    # Add this above your training loop
+    patience = 5
+    epochs_without_improvement = 0
+    best_test_loss = float('inf')
+
+    # Inside the training loop
     if test_loss < best_test_loss:
         best_test_loss = test_loss
+        epochs_without_improvement = 0  # Reset counter
         print("Saving best model...")
-        model_path = f"./tensors/cbow_model_dim{EMBEDDING_DIM}_batch{BATCH_SIZE}_best.pt"
+        model_path = f"./model/cbow_model_dim{EMBEDDING_DIM}_epoch{NUM_EPOCHS}_batch{BATCH_SIZE}_best_crossentropy.pt"
         torch.save(model.state_dict(), model_path)
         print(f"Best model saved to {model_path}")
+    else:
+        epochs_without_improvement += 1
+        print(f"Test loss did not improve. ({epochs_without_improvement}/{patience})")
+        if epochs_without_improvement >= patience:
+            print(f"Early stopping triggered after {patience} epochs without improvement.")
+            break
 
 print("\nTraining completed!")
 print(f"Final train loss: {train_loss:.4f}")
@@ -182,7 +203,7 @@ print(f"Final test loss: {test_loss:.4f}")
 
 # Save final model
 print("\nSaving final model...")
-model_path = f"./tensors/cbow_model_dim{EMBEDDING_DIM}_batch{BATCH_SIZE}_final.pt"
+model_path = f"./model/cbow_model_dim{EMBEDDING_DIM}_epoch{NUM_EPOCHS}_batch{BATCH_SIZE}_final_crossentropy.pt"
 torch.save(model.state_dict(), model_path)
 print(f"Final model saved to {model_path}")
 
@@ -190,12 +211,42 @@ print(f"Final model saved to {model_path}")
 print("\nSaving word embeddings...")
 embeddings = model.get_embeddings()
 embedding_dict = {id_to_word[i]: embeddings[i].cpu().numpy() for i in range(len(id_to_word))}
-embedding_path = f"./tensors/word_embeddings_dim{EMBEDDING_DIM}.pt"
-torch.save(embedding_dict, embedding_path)
-print(f"Word embeddings saved to {embedding_path}")
 
 # Print some example embeddings
 print("\nExample embeddings:")
 for word in list(embedding_dict.keys())[:5]:
     print(f"{word}: shape {embedding_dict[word].shape}")
+
+# Print training history as a table
+print("\nTraining History:")
+print("-" * 60)
+print(f"{'Epoch':<10} {'Train Loss':<15} {'Test Loss':<15} {'Improvement':<15}")
+print("-" * 60)
+
+# Assuming train_losses and test_losses are lists containing the history
+# If they're not already defined, we need to create them
+if 'train_losses' not in locals() or 'test_losses' not in locals():
+    # This is a fallback if the lists weren't created during training
+    print("Training history not available. Add tracking of losses during training.")
+else:
+    for epoch, (train_loss, test_loss) in enumerate(zip(train_losses, test_losses)):
+        # Calculate improvement (negative means improvement)
+        if epoch == 0:
+            improvement = "N/A"
+        else:
+            prev_test_loss = test_losses[epoch-1]
+            diff = test_loss - prev_test_loss
+            if diff < 0:
+                improvement = f"↓ {abs(diff):.4f}"
+            elif diff > 0:
+                improvement = f"↑ {diff:.4f}"
+            else:
+                improvement = "="
+        
+        print(f"{epoch+1:<10} {train_loss:<15.4f} {test_loss:<15.4f} {improvement:<15}")
+
+print("-" * 60)
+print(f"Best Test Loss: {min(test_losses):.4f} at Epoch {np.argmin(test_losses) + 1}")
+print(f"Final Train Loss: {train_losses[-1]:.4f}")
+print(f"Final Test Loss: {test_losses[-1]:.4f}")
 
