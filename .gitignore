@@ -2,27 +2,19 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.Python
 *.so
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-
-# Virtual Environment
-.env
-.venv
-env/
+.Python
 venv/
+.venv/
 ENV/
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
 
-# PyTorch model files and data
-*.pt
-data/*.pt
+# Environment variables
+.env
+postgres_connection.txt
 
 # IDE
 .idea/
@@ -37,4 +29,7 @@ data/*.pt
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db
+
+# Data files
+*.pt 
