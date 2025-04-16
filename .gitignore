@@ -39,3 +39,4 @@ djb_cbow_dataset_training_data.pt
 djb_cbow_model.pth
 djb_cbow_model_state_dict.pthwandb/
 wandb/*
+*.pt
