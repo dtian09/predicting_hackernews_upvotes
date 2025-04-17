@@ -2,6 +2,13 @@ import random
 
 import wandb
 
+config={
+        "learning_rate": 0.02,
+        "architecture": "CNN",
+        "dataset": "CIFAR-100",
+        "epochs": 10,
+    }
+
 # Start a new wandb run to track this script.
 run = wandb.init(
     # Set the wandb entity where your project will be logged (generally your team name).
@@ -9,23 +16,18 @@ run = wandb.init(
     # Set the wandb project where this run will be logged.
     project="awesome",
     # Track hyperparameters and run metadata.
-    config={
-        "learning_rate": 0.02,
-        "architecture": "CNN",
-        "dataset": "CIFAR-100",
-        "epochs": 10,
-    },
+    config=config
 )
 
 # Simulate training.
-epochs = 10
+
 offset = random.random() / 5
-for epoch in range(2, epochs):
+for epoch in range(2, config["epochs"]):
     acc = 1 - 2**-epoch - random.random() / epoch - offset
     loss = 2**-epoch + random.random() / epoch + offset
 
     # Log metrics to wandb.
-    run.log({"acc": acc, "loss": loss})
+    run.log({"acc": acc, "loss": loss, "mynumber": 5})
 
 # Finish the run and upload any remaining data.
 run.finish()
