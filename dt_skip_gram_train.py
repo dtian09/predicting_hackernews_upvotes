@@ -109,7 +109,7 @@ def batchify(pairs, batch_size):
     for i in range(0, len(pairs), batch_size):
         yield pairs[i:i + batch_size]
 
-import torch.nn.functional as F
+#import torch.nn.functional as F
 
 criterion = nn.CrossEntropyLoss()
 
