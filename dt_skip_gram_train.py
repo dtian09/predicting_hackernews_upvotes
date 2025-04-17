@@ -10,12 +10,24 @@ import torch.nn as nn
 import torch.optim as optim
 from collections import defaultdict
 import random
+import wandb
 
-# Hyperparameters
-window_size = 2 
-embedding_dim = 100 #10
-epochs = 100 #40 #100
-learning_rate = 0.01
+wandb.init(project="skipgram-sgns", config={
+    "window_size": 2,
+    "embedding_dim": 100,
+    "epochs": 100,
+    "learning_rate": 0.01,
+    "batch_size": 128,
+    "training_percentage": 0.7
+})
+
+config = wandb.config
+window_size = config.window_size
+embedding_dim = config.embedding_dim
+epochs = config.epochs
+learning_rate = config.learning_rate
+batch_size = config.batch_size
+training_percentage = config.training_percentage
 
 words = torch.load('djb_cbow_dataset_corpus.pt')
 word2idx = torch.load('djb_cbow_dataset_word_to_idx.pt')
@@ -49,10 +61,22 @@ def generate_skipgram_data(words, corpus, window_size):
                 pairs.append((target_idx, context_idx))
     return pairs
 
-print('generating skip-gram training data')
-training_pairs = generate_skipgram_data(list(selected_words), filtered_corpus, window_size=window_size)
+print('generating skip-gram data')
+data_pairs = generate_skipgram_data(list(selected_words), filtered_corpus, window_size)
 print('training data of skip-gram is generated')
-print('number of training pairs:', len(training_pairs))
+print('number of training pairs:', len(data_pairs))
+
+print('training data of skip-gram is generated')
+print('number of training pairs before split:', len(data_pairs))
+
+# Shuffle and split into training data and testing data
+random.shuffle(data_pairs)
+split_index = int(training_percentage * len(data_pairs))
+train_pairs = data_pairs[:split_index]
+test_pairs = data_pairs[split_index:]
+
+print('Training pairs:', len(train_pairs))
+print('Test pairs:', len(test_pairs))
 
 # Define Skip-gram model
 class SkipGramModel(nn.Module):
@@ -87,14 +111,12 @@ def batchify(pairs, batch_size):
 
 import torch.nn.functional as F
 
-batch_size = 128
 criterion = nn.CrossEntropyLoss()
 
 for epoch in range(epochs):
     total_loss = 0
-    random.shuffle(training_pairs)
-
-    for batch in batchify(training_pairs, batch_size):
+    random.shuffle(train_pairs)
+    for batch in batchify(train_pairs, batch_size):
         # Unpack batch into separate lists
         target_indices = [pair[0] for pair in batch]
         context_indices = [pair[1] for pair in batch]
@@ -116,10 +138,30 @@ for epoch in range(epochs):
         optimizer.step()
 
         total_loss += loss.item()
-    print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss / num_batches:.4f}")
+    avg_loss = total_loss / (len(train_pairs) // batch_size)
+    wandb.log({"epoch": epoch + 1, "train_loss": avg_loss})
+    # --- Evaluation on test set ---
+    model.eval()
+    test_loss = 0
+    with torch.no_grad():
+        for batch in batchify(test_pairs, batch_size):
+            target_indices = [pair[0] for pair in batch]
+            context_indices = [pair[1] for pair in batch]
 
-torch.save(model.state_dict(), "./models/skip_gram_model.pt")
-print("Model saved to ./models/skip_gram_model.pt")
+            target_tensor = torch.tensor(target_indices, dtype=torch.long).to(device)
+            context_tensor = torch.tensor(context_indices, dtype=torch.long).to(device)
+
+            target_emb = model.target_embedding(target_tensor)
+            logits = torch.matmul(target_emb, model.context_embedding.weight.t())
+
+            loss = criterion(logits, context_tensor)
+            test_loss += loss.item()
+
+    avg_test_loss = test_loss / (len(test_pairs) // batch_size)
+    wandb.log({"epoch": epoch + 1, "test_loss": avg_test_loss})
+    print(f"Epoch {epoch+1}/{epochs}, Train Loss: {avg_loss:.4f}, Test Loss: {avg_test_loss:.4f}")
+    model.train()  # Back to training mode
+
 
 # save embeddings to dictionary 
 embeddings = {}
@@ -132,3 +174,6 @@ for word in word2idx:
 
 # Save the dictionary to a .pt file
 torch.save(embeddings, 'skip_gram_embeddings.pt')
+
+#torch.save(model.state_dict(), "skip_gram_model.pt")
+#print("Model saved to "skip_gram_model.pt")
