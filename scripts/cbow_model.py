@@ -6,6 +6,29 @@ from tqdm import tqdm
 import time
 import os
 import numpy as np
+import wandb
+
+# Initialize wandb
+wandb.init(
+    project="bryars-bryars",
+    config={
+        "embedding_dim": 200,
+        "batch_size": 128,
+        "learning_rate": 0.005,
+        "num_epochs": 30,
+        "train_split": 0.8,
+        "dropout": 0.3,
+        "weight_decay": 1e-3,
+        "architecture": "CBOW"
+    }
+)
+
+# Training parameters from wandb config
+EMBEDDING_DIM = wandb.config.embedding_dim
+BATCH_SIZE = wandb.config.batch_size
+LEARNING_RATE = wandb.config.learning_rate
+NUM_EPOCHS = wandb.config.num_epochs
+TRAIN_SPLIT = wandb.config.train_split
 
 # Check GPU availability
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -17,20 +40,13 @@ if torch.cuda.is_available():
     # Enable cuDNN auto-tuner
     torch.backends.cudnn.benchmark = True
 
-# Training parameters
-EMBEDDING_DIM = 200
-BATCH_SIZE = 128
-LEARNING_RATE = 0.005
-NUM_EPOCHS = 30
-TRAIN_SPLIT = 0.8  # 80% training, 20% testing
-
 print("\nLoading training data...")
-training_data = torch.load("./tensors/eve_training_data.pt")
+training_data = torch.load("./data/eve_training_data.pt")
 print("Training data loaded successfully")
 
 print("\nLoading word mappings...")
-word_to_id = torch.load("./tensors/eve_word_to_id.pt")
-id_to_word = torch.load("./tensors/eve_id_to_word.pt")
+word_to_id = torch.load("./data/word_to_id.pt")
+id_to_word = torch.load("./data/id_to_word.pt")
 print("Word mappings loaded successfully")
 
 # create a custom dataset class
@@ -114,7 +130,7 @@ print(f"Model created with vocab_size={vocab_size}, embedding_dim={EMBEDDING_DIM
 
 # Training setup
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=wandb.config.weight_decay)
 
 def evaluate(model, data_loader):
     model.eval()
@@ -162,6 +178,12 @@ for epoch in range(NUM_EPOCHS):
         total_loss += loss.item()
         current_loss = total_loss / (batch_idx + 1)
         progress_bar.set_postfix({'loss': f'{current_loss:.4f}'})
+        
+        # Log batch metrics to wandb
+        wandb.log({
+            "batch_loss": loss.item(),
+            "batch": batch_idx + epoch * len(train_loader)
+        })
     
     # Epoch summary
     train_loss = total_loss / len(train_loader)
@@ -172,23 +194,29 @@ for epoch in range(NUM_EPOCHS):
     train_losses.append(train_loss)
     test_losses.append(test_loss)
     
+    # Log epoch metrics to wandb
+    wandb.log({
+        "epoch": epoch + 1,
+        "train_loss": train_loss,
+        "test_loss": test_loss,
+        "epoch_time": epoch_time,
+        "learning_rate": optimizer.param_groups[0]['lr']
+    })
+    
     print(f'\nEpoch {epoch+1}/{NUM_EPOCHS}:')
     print(f'Train Loss: {train_loss:.4f}')
     print(f'Test Loss: {test_loss:.4f}')
     print(f'Time: {epoch_time:.2f} seconds')
     
-    # Add this above your training loop
-    patience = 5
-    epochs_without_improvement = 0
-    best_test_loss = float('inf')
-
-    # Inside the training loop
+    # Early stopping
     if test_loss < best_test_loss:
         best_test_loss = test_loss
         epochs_without_improvement = 0  # Reset counter
         print("Saving best model...")
         model_path = f"./model/cbow_model_dim{EMBEDDING_DIM}_epoch{NUM_EPOCHS}_batch{BATCH_SIZE}_best_crossentropy.pt"
         torch.save(model.state_dict(), model_path)
+        # Log best model to wandb
+        wandb.save(model_path)
         print(f"Best model saved to {model_path}")
     else:
         epochs_without_improvement += 1
@@ -201,16 +229,28 @@ print("\nTraining completed!")
 print(f"Final train loss: {train_loss:.4f}")
 print(f"Final test loss: {test_loss:.4f}")
 
-# Save final model
+# Save final model and log to wandb
 print("\nSaving final model...")
 model_path = f"./model/cbow_model_dim{EMBEDDING_DIM}_epoch{NUM_EPOCHS}_batch{BATCH_SIZE}_final_crossentropy.pt"
 torch.save(model.state_dict(), model_path)
+wandb.save(model_path)
 print(f"Final model saved to {model_path}")
 
 # Save embeddings
 print("\nSaving word embeddings...")
 embeddings = model.get_embeddings()
 embedding_dict = {id_to_word[i]: embeddings[i].cpu().numpy() for i in range(len(id_to_word))}
+
+# Log final metrics to wandb
+wandb.log({
+    "final_train_loss": train_losses[-1],
+    "final_test_loss": test_losses[-1],
+    "best_test_loss": min(test_losses),
+    "best_epoch": np.argmin(test_losses) + 1
+})
+
+# Finish wandb run
+wandb.finish()
 
 # Print some example embeddings
 print("\nExample embeddings:")
