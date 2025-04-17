@@ -42,3 +42,24 @@ wandb/*
 *.pt
 *.pkl
 *.bz2
+
+# Ensure requirements.txt is not ignored
+!requirements.txt
+
+# Allow specific directories
+!wandb/
+!notebooks/
+
+# Ignore specific file types or patterns
+*.log
+*.tmp
+*.bak
+*.swp
+*.pyc
+__pycache__/
+
+# Ignore specific directories
+node_modules/
+dist/
+build/
+.env
