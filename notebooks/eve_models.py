@@ -21,7 +21,9 @@ class Regressor(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.seq = torch.nn.Sequential(
-            torch.nn.Linear(in_features=200, out_features=64),
+            torch.nn.Linear(in_features=200, out_features=128),
+            torch.nn.ReLU(),
+            torch.nn.Linear(in_features=128, out_features=64),
             torch.nn.ReLU(),
             torch.nn.Linear(in_features=64, out_features=32),
             torch.nn.ReLU(),
