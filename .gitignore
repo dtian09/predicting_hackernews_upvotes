@@ -63,3 +63,5 @@ node_modules/
 dist/
 build/
 .env
+*.csv
+*.zip
